@@ -1,0 +1,512 @@
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
+<title>MOTO X — NIGHT RIDE</title>  
+<link rel="preconnect" href="https://fonts.googleapis.com">  
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">  
+<style>  
+:root {  
+  --neon-blue: #00d4ff;  
+  --neon-pink: #ff2d78;  
+  --neon-orange: #ff6a00;  
+  --neon-green: #00ff88;  
+  --gold: #ffd700;  
+  --glass: rgba(255,255,255,0.06);  
+  --glass-border: rgba(255,255,255,0.12);  
+}  
+*{margin:0;padding:0;box-sizing:border-box;}  
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Exo 2',sans-serif;}  
+#c{display:block;position:fixed;top:0;left:0;width:100%;height:100%;}  /* ── OVERLAY LAYERS ── */
+#fx-layer{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+#scanlines{
+position:fixed;inset:0;pointer-events:none;z-index:3;
+background:repeating-linear-gradient(0deg,rgba(0,0,0,0.04) 0,rgba(0,0,0,0.04) 1px,transparent 1px,transparent 2px);
+}
+#vignette{
+position:fixed;inset:0;pointer-events:none;z-index:3;
+background:radial-gradient(ellipse 80% 70% at 50% 50%,transparent 50%,rgba(0,0,0,0.75) 100%);
+}
+#damage-flash{position:fixed;inset:0;pointer-events:none;z-index:6;background:transparent;transition:background 0.08s;}
+#nitro-flash{position:fixed;inset:0;pointer-events:none;z-index:5;background:transparent;transition:background 0.15s;}
+#motion-blur{
+position:fixed;inset:0;pointer-events:none;z-index:4;
+background:linear-gradient(to bottom,transparent 30%,rgba(0,0,10,0.1) 100%);
+opacity:0;transition:opacity 0.3s;
+}
+
+/* ── HUD ── */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10;display:none;}
+
+/* Speedometer */
+#speedo{
+position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+text-align:center;
+}
+#speed-ring{
+width:130px;height:130px;border-radius:50%;
+border:2px solid rgba(0,212,255,0.3);
+background:radial-gradient(circle,rgba(0,212,255,0.05) 0%,rgba(0,0,0,0.7) 70%);
+backdrop-filter:blur(10px);
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+box-shadow:0 0 30px rgba(0,212,255,0.2),inset 0 0 20px rgba(0,0,0,0.5);
+position:relative;
+}
+#speed-ring::before{
+content:'';position:absolute;inset:-3px;border-radius:50%;
+background:conic-gradient(var(--neon-blue) 0deg, transparent 0deg);
+z-index:-1;transition:background 0.1s;
+}
+#speed-num{
+font-family:'Orbitron',sans-serif;font-size:38px;font-weight:900;
+color:#fff;line-height:1;
+text-shadow:0 0 20px var(--neon-blue);
+}
+#speed-unit{font-size:10px;color:var(--neon-blue);letter-spacing:4px;margin-top:2px;}
+#gear-display{font-size:11px;color:#aaa;letter-spacing:2px;margin-top:4px;}
+
+/* Score */
+#score-panel{
+position:absolute;top:16px;right:16px;
+background:var(--glass);border:1px solid var(--glass-border);
+backdrop-filter:blur(12px);border-radius:12px;
+padding:10px 18px;text-align:right;
+box-shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+#score-val{font-family:'Orbitron',sans-serif;font-size:30px;color:#fff;text-shadow:0 0 15px var(--neon-orange);}
+#score-lbl{font-size:10px;color:#888;letter-spacing:4px;margin-top:2px;}
+
+/* Map badge */
+#map-badge{
+position:absolute;top:16px;left:16px;
+background:var(--glass);border:1px solid var(--glass-border);
+backdrop-filter:blur(12px);border-radius:10px;
+padding:8px 14px;
+box-shadow:0 4px 20px rgba(0,0,0,0.4);
+}
+#map-name{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--neon-blue);letter-spacing:2px;}
+#map-dist{font-size:11px;color:#666;letter-spacing:2px;margin-top:2px;}
+
+/* Nitro bar */
+#nitro-panel{
+position:absolute;bottom:20px;right:20px;
+background:var(--glass);border:1px solid var(--glass-border);
+backdrop-filter:blur(10px);border-radius:10px;
+padding:10px 14px;width:130px;
+box-shadow:0 4px 20px rgba(0,0,0,0.4);
+}
+#nitro-lbl{font-size:10px;color:var(--neon-blue);letter-spacing:4px;margin-bottom:6px;}
+#nitro-track{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+#nitro-fill{height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#0099ff,#00d4ff,#00ffee);transition:width 0.1s;}
+#nitro-count{font-family:'Orbitron',sans-serif;font-size:18px;color:#fff;margin-top:6px;text-align:center;}
+
+/* Health */
+#health-panel{
+position:absolute;bottom:20px;left:20px;
+background:var(--glass);border:1px solid var(--glass-border);
+backdrop-filter:blur(10px);border-radius:10px;
+padding:10px 14px;width:130px;
+}
+#health-lbl{font-size:10px;color:var(--neon-pink);letter-spacing:4px;margin-bottom:6px;}
+#health-track{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+#health-fill{height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#ff2d78,#ff6a6a);transition:width 0.3s;}
+
+/* Combo */
+#combo-panel{
+position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+text-align:center;pointer-events:none;opacity:0;transition:opacity 0.3s;
+}
+#combo-num{font-family:'Orbitron',sans-serif;font-size:48px;color:var(--gold);text-shadow:0 0 30px var(--gold);}
+#combo-txt{font-size:12px;color:#aaa;letter-spacing:6px;}
+
+/* ── MAIN MENU ── */
+#menu-screen{
+position:fixed;inset:0;z-index:50;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+overflow:hidden;
+}
+#menu-bg{
+position:absolute;inset:0;
+background:radial-gradient(ellipse 120% 80% at 50% 60%,#0a0020 0%,#000510 50%,#000 100%);
+}
+.menu-grid{
+position:absolute;inset:0;
+background-image:
+linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),
+linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);
+background-size:50px 50px;
+transform:perspective(600px) rotateX(35deg) scale(1.5);
+transform-origin:50% 80%;
+}
+.menu-grid::after{
+content:'';position:absolute;inset:0;
+background:linear-gradient(to top,transparent 0%,rgba(0,0,0,0.8) 60%);
+}
+#menu-content{position:relative;z-index:1;text-align:center;width:100%;max-width:600px;padding:0 20px;}
+
+.logo-wrap{margin-bottom:8px;}
+.logo-eyebrow{font-size:12px;color:var(--neon-blue);letter-spacing:10px;text-transform:uppercase;opacity:0.7;}
+.logo-title{
+font-family:'Orbitron',sans-serif;font-size:clamp(52px,11vw,100px);
+font-weight:900;line-height:0.9;
+background:linear-gradient(135deg,#fff 0%,var(--neon-blue) 40%,var(--neon-pink) 80%);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+filter:drop-shadow(0 0 40px rgba(0,212,255,0.4));
+letter-spacing:-2px;
+}
+.logo-sub{
+font-size:13px;color:var(--neon-pink);letter-spacing:8px;margin-top:6px;
+text-shadow:0 0 20px var(--neon-pink);
+}
+
+/* Map selector */
+#map-selector{
+display:flex;gap:16px;justify-content:center;margin:32px 0;
+}
+.map-card{
+flex:1;max-width:180px;
+background:var(--glass);
+border:1px solid var(--glass-border);
+backdrop-filter:blur(16px);
+border-radius:16px;padding:16px;
+cursor:pointer;transition:all 0.25s;
+position:relative;overflow:hidden;
+}
+.map-card::before{
+content:'';position:absolute;inset:0;border-radius:16px;
+background:linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0));
+opacity:0;transition:opacity 0.25s;
+}
+.map-card:hover::before,.map-card.active::before{opacity:1;}
+.map-card.active{border-color:var(--neon-blue);box-shadow:0 0 25px rgba(0,212,255,0.3),inset 0 0 20px rgba(0,212,255,0.05);}
+.map-card:hover:not(.active){border-color:rgba(255,255,255,0.2);transform:translateY(-3px);}
+.map-icon{font-size:28px;margin-bottom:8px;}
+.map-card-title{font-family:'Orbitron',sans-serif;font-size:13px;color:#fff;letter-spacing:2px;}
+.map-card-sub{font-size:11px;color:#666;margin-top:4px;}
+.map-card.active .map-card-title{color:var(--neon-blue);}
+.map-active-dot{
+width:6px;height:6px;border-radius:50%;background:var(--neon-blue);
+position:absolute;top:10px;right:10px;
+box-shadow:0 0 8px var(--neon-blue);
+display:none;
+}
+.map-card.active .map-active-dot{display:block;}
+
+/* Buttons */
+.glass-btn{
+display:inline-flex;align-items:center;justify-content:center;gap:10px;
+background:var(--glass);
+border:1px solid var(--glass-border);
+backdrop-filter:blur(16px);
+border-radius:50px;
+padding:14px 40px;
+font-family:'Orbitron',sans-serif;font-size:15px;font-weight:700;
+letter-spacing:4px;color:#fff;cursor:pointer;
+transition:all 0.2s;
+position:relative;overflow:hidden;
+text-transform:uppercase;
+}
+.glass-btn::after{
+content:'';position:absolute;inset:0;border-radius:50px;
+background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent);
+opacity:0;transition:opacity 0.2s;
+}
+.glass-btn:hover::after{opacity:1;}
+.glass-btn.primary{
+background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(255,45,120,0.15));
+border-color:rgba(0,212,255,0.5);
+box-shadow:0 0 30px rgba(0,212,255,0.2),0 4px 20px rgba(0,0,0,0.4);
+}
+.glass-btn.primary:hover{
+transform:translateY(-2px);
+box-shadow:0 0 50px rgba(0,212,255,0.4),0 8px 30px rgba(0,0,0,0.5);
+border-color:var(--neon-blue);
+}
+.btn-icon{font-size:18px;}
+
+/* Best score display */
+#best-display{
+margin-top:16px;
+font-size:12px;color:#444;letter-spacing:4px;
+}
+#best-display span{color:var(--gold);}
+
+/* ── GAME OVER ── */
+#over-screen{
+position:fixed;inset:0;z-index:50;
+display:none;flex-direction:column;align-items:center;justify-content:center;
+background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);
+}
+.over-card{
+background:var(--glass);
+border:1px solid var(--glass-border);
+backdrop-filter:blur(20px);border-radius:24px;
+padding:40px 50px;text-align:center;
+box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 60px rgba(255,45,120,0.1);
+max-width:380px;width:90%;
+}
+.over-title{
+font-family:'Orbitron',sans-serif;font-size:42px;font-weight:900;
+background:linear-gradient(135deg,var(--neon-pink),#ff8c00);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+margin-bottom:6px;
+}
+.over-sub{font-size:12px;color:#555;letter-spacing:4px;margin-bottom:28px;}
+#over-score-val{
+font-family:'Orbitron',sans-serif;font-size:62px;font-weight:900;color:#fff;
+text-shadow:0 0 40px rgba(255,106,0,0.6);line-height:1;
+}
+#over-score-lbl{font-size:11px;color:#666;letter-spacing:4px;margin-top:4px;margin-bottom:20px;}
+#over-best-row{
+display:flex;align-items:center;justify-content:center;gap:8px;
+font-size:13px;color:var(--gold);letter-spacing:3px;margin-bottom:32px;
+}
+.crown{font-size:18px;}
+
+/* ── MOBILE CONTROLS ── */
+#mobile-ctrl{
+position:fixed;bottom:0;left:0;right:0;height:160px;
+display:none;z-index:15;pointer-events:all;
+}
+.m-zone{
+position:absolute;bottom:20px;
+width:100px;height:100px;border-radius:50%;
+background:rgba(0,0,0,0.4);
+border:2px solid rgba(255,255,255,0.1);
+backdrop-filter:blur(8px);
+display:flex;align-items:center;justify-content:center;
+font-size:30px;color:rgba(255,255,255,0.4);
+transition:all 0.1s;user-select:none;
+}
+.m-zone.active{background:rgba(0,212,255,0.15);border-color:rgba(0,212,255,0.5);color:var(--neon-blue);}
+#m-left{left:20px;}
+#m-right{right:20px;}
+#m-nitro{
+left:50%;transform:translateX(-50%);bottom:16px;
+width:80px;height:80px;
+border-radius:50%;
+background:rgba(0,100,200,0.2);
+border:2px solid rgba(0,212,255,0.3);
+font-size:11px;color:var(--neon-blue);letter-spacing:2px;
+font-family:'Orbitron',sans-serif;font-weight:700;
+}
+#m-nitro.active{background:rgba(0,212,255,0.3);border-color:var(--neon-blue);}
+
+/* ── NITRO PARTICLES ── */
+#nitro-screen{
+position:fixed;inset:0;pointer-events:none;z-index:4;
+background:radial-gradient(ellipse 80% 40% at 50% 110%,rgba(0,150,255,0.12),transparent 60%);
+opacity:0;transition:opacity 0.2s;
+}
+
+/* ── GOD RAYS (forest) ── */
+#god-rays{
+position:fixed;top:0;left:0;width:100%;height:60%;pointer-events:none;z-index:3;
+opacity:0;transition:opacity 1s;
+}
+
+/* ── COUNTDOWN ── */
+#countdown{
+position:fixed;inset:0;z-index:40;
+display:none;align-items:center;justify-content:center;
+background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+}
+#countdown-num{
+font-family:'Orbitron',sans-serif;font-size:120px;font-weight:900;
+color:#fff;text-shadow:0 0 80px var(--neon-blue);
+animation:countPulse 0.8s ease forwards;
+}
+@keyframes countPulse{
+0%{transform:scale(1.8);opacity:0;}
+50%{transform:scale(1);opacity:1;}
+100%{transform:scale(0.8);opacity:0.7;}
+}
+</style>
+
+</head>  
+<body>  <canvas id="c"></canvas>
+
+<!-- Overlays -->  <div id="scanlines"></div>  
+<div id="vignette"></div>  
+<div id="damage-flash"></div>  
+<div id="nitro-flash"></div>  
+<div id="motion-blur"></div>  
+<div id="nitro-screen"></div>  
+<canvas id="god-rays" width="800" height="400"></canvas>  <!-- HUD -->  <div id="hud">  
+  <div id="map-badge">  
+    <div id="map-name">NIGHT CITY</div>  
+    <div id="map-dist">0.0 km</div>  
+  </div>  
+  <div id="score-panel">  
+    <div id="score-val">0</div>  
+    <div id="score-lbl">SCORE</div>  
+  </div>  
+  <div id="speedo">  
+    <div id="speed-ring">  
+      <div id="speed-num">0</div>  
+      <div id="speed-unit">KM/H</div>  
+      <div id="gear-display">GEAR 1</div>  
+    </div>  
+  </div>  
+  <div id="health-panel">  
+    <div id="health-lbl">HEALTH</div>  
+    <div id="health-track"><div id="health-fill"></div></div>  
+  </div>  
+  <div id="nitro-panel">  
+    <div id="nitro-lbl">NITRO</div>  
+    <div id="nitro-track"><div id="nitro-fill"></div></div>  
+    <div id="nitro-count">N/A</div>  
+  </div>  
+  <div id="combo-panel">  
+    <div id="combo-num">x3</div>  
+    <div id="combo-txt">COMBO</div>  
+  </div>  
+</div>  <!-- Main Menu -->  <div id="menu-screen">  
+  <div id="menu-bg"></div>  
+  <div class="menu-grid"></div>  
+  <div id="menu-content">  
+    <div class="logo-wrap">  
+      <div class="logo-eyebrow">Endless Racing</div>  
+      <div class="logo-title">MOTO X</div>  
+      <div class="logo-sub">Choose Your World</div>  
+    </div>  
+    <div id="map-selector">  
+      <div class="map-card active" data-map="night" onclick="selectMap('night')">  
+        <div class="map-active-dot"></div>  
+        <div class="map-icon">🌃</div>  
+        <div class="map-card-title">NIGHT CITY</div>  
+        <div class="map-card-sub">Neon • Wet Asphalt</div>  
+      </div>  
+      <div class="map-card" data-map="forest" onclick="selectMap('forest')">  
+        <div class="map-active-dot"></div>  
+        <div class="map-icon">🌲</div>  
+        <div class="map-card-title">FOREST TRAIL</div>  
+        <div class="map-card-sub">Golden Hour • Gravel</div>  
+      </div>  
+    </div>  
+    <button class="glass-btn primary" id="start-btn" onclick="beginCountdown()">  
+      <span class="btn-icon">🏍️</span> START ENGINE  
+    </button>  
+    <div id="best-display">BEST SCORE: <span id="best-val">0</span></div>  
+    <div style="margin-top:16px;font-size:11px;color:#333;letter-spacing:3px;">  
+      ← → STEER &nbsp;|&nbsp; SPACE / S NITRO &nbsp;|&nbsp; AVOID OBSTACLES  
+    </div>  
+  </div>  
+</div>  <!-- Countdown -->  <div id="countdown"><div id="countdown-num">3</div></div>  <!-- Game Over -->  <div id="over-screen">  
+  <div class="over-card">  
+    <div class="over-title">WIPEOUT</div>  
+    <div class="over-sub">YOU CRASHED</div>  
+    <div id="over-score-val">0</div>  
+    <div id="over-score-lbl">FINAL SCORE</div>  
+    <div id="over-best-row"><span class="crown">👑</span> BEST: <span id="over-best-val">0</span></div>  
+    <button class="glass-btn primary" onclick="returnToMenu()">← MAIN MENU</button>  
+    <div style="height:10px;"></div>  
+    <button class="glass-btn" onclick="beginCountdown()" style="font-size:13px;padding:12px 32px;">RIDE AGAIN</button>  
+  </div>  
+</div>  <!-- Mobile Controls -->  <div id="mobile-ctrl">  
+  <div class="m-zone" id="m-left">◀</div>  
+  <div class="m-zone" id="m-nitro">NOS</div>  
+  <div class="m-zone" id="m-right">▶</div>  
+</div>  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>  <script>  
+// ════════════════════════════════════════════════  
+//  CONSTANTS & CONFIG  
+// ════════════════════════════════════════════════  
+const ROAD_W = 14;  
+const SEG_LEN = 22;  
+const SEG_COUNT = 18;  
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.innerWidth<768;  
+if(isMobile) document.getElementById('mobile-ctrl').style.display='block';  
+  
+// ════════════════════════════════════════════════  
+//  RENDERER  
+// ════════════════════════════════════════════════  
+const canvas = document.getElementById('c');  
+const renderer = new THREE.WebGLRenderer({canvas, antialias:!isMobile, powerPreference:'high-performance'});  
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile?1.5:2));  
+renderer.setSize(window.innerWidth, window.innerHeight);  
+renderer.shadowMap.enabled = true;  
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;  
+renderer.toneMapping = THREE.ACESFilmicToneMapping;  
+renderer.toneMappingExposure = 0.9;  
+  
+const scene = new THREE.Scene();  
+const camera = new THREE.PerspectiveCamera(68, window.innerWidth/window.innerHeight, 0.1, 400);  
+camera.position.set(0, 3.5, 4);  
+camera.lookAt(0, 1, -20);  
+  
+window.addEventListener('resize',()=>{  
+  renderer.setSize(window.innerWidth, window.innerHeight);  
+  camera.aspect = window.innerWidth/window.innerHeight;  
+  camera.updateProjectionMatrix();  
+});  
+  
+// ════════════════════════════════════════════════  
+//  MAP SELECTION STATE  
+// ════════════════════════════════════════════════  
+let currentMap = 'night';  
+function selectMap(m){  
+  currentMap = m;  
+  document.querySelectorAll('.map-card').forEach(c=>{  
+    c.classList.toggle('active', c.dataset.map===m);  
+  });  
+}  
+  
+// ════════════════════════════════════════════════  
+//  SCENE SETUP — called when map changes  
+// ════════════════════════════════════════════════  
+let roadSegs=[], buildings=[], lampGroups=[], particles=[];  
+let fogColor, skyColor;  
+  
+function buildScene(map){  
+  // Clear  
+  while(scene.children.length) scene.remove(scene.children[0]);  
+  roadSegs=[]; buildings=[]; lampGroups=[];  
+  
+  if(map==='night'){  
+    skyColor = new THREE.Color(0x020510);  
+    fogColor = new THREE.Color(0x020510);  
+    scene.fog = new THREE.FogExp2(fogColor, 0.018);  
+    renderer.setClearColor(skyColor);  
+    buildNightScene();  
+  } else {  
+    skyColor = new THREE.Color(0x4a3010);  
+    fogColor = new THREE.Color(0x7a5020);  
+    scene.fog = new THREE.FogExp2(fogColor, 0.014);  
+    renderer.setClearColor(new THREE.Color(0x1a0f00));  
+    buildForestScene();  
+  }  
+  buildBike();  
+  buildLights(map);  
+  spawnInitialObstacles();  
+}  
+  
+// ── NIGHT SCENE ──  
+function buildNightScene(){  
+  // Ambient  
+  scene.add(new THREE.AmbientLight(0x080818, 0.8));  
+  
+  // Road segments  
+  const roadMat = new THREE.MeshStandardMaterial({color:0x0d0d12,roughness:0.9,metalness:0.1});  
+  const wetRoadMat = new THREE.MeshStandardMaterial({color:0x080810,roughness:0.2,metalness:0.4,envMapIntensity:1});  
+  const lineMat = new THREE.MeshStandardMaterial({color:0x2a2a3a,roughness:1});  
+  const stripeMat = new THREE.MeshStandardMaterial({color:0xddaa00,emissive:0x332200,emissiveIntensity:0.4,roughness:1});  
+  const sidewalkMat = new THREE.MeshStandardMaterial({color:0x111118,roughness:0.9});  
+  
+  for(let i=0;i<SEG_COUNT;i++){  
+    const g = new THREE.Group();  
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W,SEG_LEN), i%2===0?roadMat:wetRoadMat);  
+    road.rotation.x=-Math.PI/2; road.receiveShadow=true; g.add(road);  
+    // Sidewalks  
+    [-ROAD_W/2-1.5, ROAD_W/2+1.5].forEach(x=>{  
+      const sw = new THREE.Mesh(new THREE.BoxGeometry(3,0.12,SEG_LEN), sidewalkMat);  
+      sw.position.set(x,0.06,0); g.add(sw);  
+    });  
+    // Side curb glow  
+    [-ROAD_W/2+0.1, ROAD_W/2-0.1].forEach((x,si)=>{  
+      const curb = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.01,SEG_LEN),  
+        new THREE.MeshStandardMaterial({color:si===0?0x00aaff:0xff0060,emissive:si===0?0x004488:0x660030,emissiveIntensity:1}));  
+      curb.position.set(x,0.005,0); g.add(curb);  
+    });  
+    // Center dashes  
+    for(let d=0;d<4;d++){  
+      const da
